@@ -248,7 +248,7 @@ func WithDefaultOptionsHandlerFunc(methods []string, rate int, origins []string,
 		if p == nil {
 			return fmt.Errorf("http OPTIONS handler func can not set nil protocol")
 		}
-		p.OptionsHandlerFn = p.DeleteHandlerFn
+		p.OptionsHandlerFn = p.OptionsHandler
 		p.WebhookConfig = &WebhookConfig{
 			AllowedMethods:  methods,
 			AllowedRate:     &rate,
@@ -286,4 +286,16 @@ func WithRateLimiter(rl RateLimiter) Option {
 		p.limiter = rl
 		return nil
 	}
+}
+
+// WithRequestDataAtContextMiddleware adds to the Context RequestData.
+// This enables a user's dispatch handler to inspect HTTP request information by
+// retrieving it from the Context.
+func WithRequestDataAtContextMiddleware() Option {
+	return WithMiddleware(func(next nethttp.Handler) nethttp.Handler {
+		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+			ctx := WithRequestDataAtContext(r.Context(), r)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	})
 }
